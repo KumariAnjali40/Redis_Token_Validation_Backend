@@ -33,33 +33,46 @@ userRouter.post('/register',(req,res)=>{
     }
 })
 
+var token;
+
 userRouter.post("/login", async (req, res) => {
-    const { email, pass } = req.body;
-    try {
-      const user = await UserModel.findOne({ email });
-      if (user) {
-        bcrypt.compare(pass, user.pass, (err, result) => {
-          if (result) {
-            const token = jwt.sign({ course: "nsd104" }, "masai",{expiresIn:100});
-            
-            redis.set(token, "Anjali", 'EX', 120);
-            console.log(token);
-  
-            res.status(200).json({
+  const { email, pass } = req.body;
+  try {
+    const user = await UserModel.findOne({ email });
+    if (user) {
+      bcrypt.compare(pass, user.pass, async (err, result) => {
+        if (result) {
+          const redisTokenValue = await redis.get(token);
+
+          if (redisTokenValue === email) {
+            return res.status(200).json({
               msg: "login done",
               token: token,
+              source: "redis",
             });
-          } else {
-            res.status(200).json({ msg: "wrong password" });
           }
-        });
-      }
-    } catch (err) {
-      console.log(err);
-      res.status(400).json({ error: err });
-    }
-  });
+          token = jwt.sign({ course: "nsd104" }, "masai", {
+            expiresIn: 1000,
+          });
 
+          redis.set(token, email, "EX", 1200);
+          console.log(token);
+
+          res.status(200).json({
+            msg: "login done",
+            token: token,
+            source: "mongodb",
+          });
+        } else {
+          res.status(200).json({ msg: "wrong password" });
+        }
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(400).json({ error: err });
+  }
+});
 
 
 
