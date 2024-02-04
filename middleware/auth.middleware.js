@@ -28,7 +28,7 @@ const auth = async (req, res, next) => {
 async function isTokenBlacklisted(token) {
     const result = await redis.get(token);
     return result === 'blacklisted'; // return boolean...
- }
+}
 
 module.exports = {
   auth,
